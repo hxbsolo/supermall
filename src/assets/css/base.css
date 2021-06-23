@@ -1,12 +1,13 @@
 @import "./normalize.css";
 
-:root {
+:root {   /* :root 获取根元素*/
     --color-text: #666;
     --color-high-text: #ff5777;
     --color-tint: #ff8198;
     --color-background: #fff;
     --font-size: 14px;
     --line-height: 1.5;
+    /*定义变量 ,可以通过var(--font-size)来使用*/
 }
 
 *,
