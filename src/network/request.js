@@ -21,5 +21,6 @@ export function request(config){
     console.error(err)
   })
 
+  //返回Promise对象
   return instance(config)
 }
