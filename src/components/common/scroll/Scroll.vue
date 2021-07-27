@@ -7,8 +7,6 @@
 </template>
 <script>
 import BetterScroll  from 'better-scroll'
-import ObserveDOM from '@better-scroll/observe-dom'
-BetterScroll.use(ObserveDOM)
 export default {
   name: "scroll",
   data(){
@@ -34,23 +32,31 @@ export default {
       pullUpLoad:UpLoad, //是否开启上拉
       observeDOM: true, //动态获取滚动高度
       probeType:a, //是否派发scroll
+      observeImage:true
      })
-    this.scroll.on('scroll',(p) =>{
-      this.$emit('scroll',p)
-    })
-    this.scroll.on('pullingUp',() =>{
-      this.$emit('RequestSend')
-    })
+    //监听scroll事件触发发送事件到Home
+    if(this.scroll.options.probeType == 2 || this.scroll.options.probeType == 3 ){
+      this.scroll.on('scroll',(p) =>{
+        this.$emit('scroll',p)
+      })
+    }
+    //触发上拉发送事件到Home
+    if(this.scroll.plugins.pullUpLoad){
+      this.scroll.on('pullingUp',() =>{
+        this.$emit('RequestSend')
+      })
+    }
   },
   methods:{
     ScrollTo(x,y,time=800){
-      this.scroll.scrollTo(x,y,time)
+      this.scroll && this.scroll.scrollTo(x,y,time)
     },
-    //封装相应上拉加载函数,
+    refresh(){
+     this.scroll && this.scroll.refresh()
+    },
+    // //封装相应上拉加载函数,
     finishPullUp(){
-      this.scroll.finishPullUp()
-      //动态获取添加商品后content的高度,解决添加商品,却无法上拉的问题
-      this.scroll.refresh()
+      this.scroll && this.scroll.finishPullUp()
     }
   }
 }

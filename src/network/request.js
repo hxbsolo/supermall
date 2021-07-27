@@ -1,5 +1,4 @@
 import axios from 'axios' //引入axios
-
 //封装网络请求
 export function request(config){
   const instance = axios.create({

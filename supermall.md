@@ -145,19 +145,23 @@ Home只需要拿到数据来进行操作,而不需要去管网络请求
 
 
 
-#####  推荐信息![image-20210624091343760](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210624091343760.png)
+#####  推荐信息(FeatureView)![image-20210624091343760](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210624091343760.png)
 
 在Home下创建子组件 Home_Recommends来进行推荐信息的 编写
 
 通过props 从home组件获取到渲染所需的数据
 
-##### TabControl  
+#### TabControl  
 
 在content 创建 tabcontrol 文件夹创建 TabControl创建组件,由于只是文字不同,所以没有采用插槽,而是通过父子传参props来进行
 
-##### 首页商品列表
-
 ![image-20210624160251383](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210624160251383.png)
+
+##### TabControl点击切换商品
+
+通过子传父 在你点击的时候,发送一个为tabClick的事件,参数为你当前点击商品类别的下标,并在Home进行监听,使其监听到触发tabClick（tabClick分别为两个不同函数,命名重复而已）,
+
+#### 首页商品数据请求/渲染
 
 ##### 保存商品的数据结构设计
 
@@ -165,7 +169,25 @@ Home只需要拿到数据来进行操作,而不需要去管网络请求
 
 可以在data中定义一个对象goods,里面有三个对象分别对应着三种不同的数据,在这三个对象中在定义page,list属性的初始值.用来存储三种数据
 
-![image-20210624160709513](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210624160709513.png)
+```js
+//home中所定义的data
+  data(){
+    return {
+      // result:null,
+      banners:[],
+      recommends:[],
+      titles:[],
+      goods:{
+        'pop': { page:0,list:[]},
+        'new': { page:0,list:[]},
+        'sell': { page:0,list:[]},
+      },
+      //定义一个为currentType来控制我们请求相应的商品数据
+      //默认请求一次pop数据
+      currentType: 'pop'
+    }
+  },
+```
 
 设置page  是因为 一般当我们请求数据时,不会请求太多,不然dom加载过多,会导致页面加载变慢卡顿,甚至崩溃. 
 
@@ -178,6 +200,8 @@ Home只需要拿到数据来进行操作,而不需要去管网络请求
 此项目API:
 
 http://152.136.185.210:7878/api/m5
+
+##### 进行网络请求
 
 在network/home.js中封装对于商品数据的请求   
 
@@ -217,59 +241,29 @@ type(sell/pop/new三个其中之一)和page(page从1开始)参数没有传, 是�
     }
 ```
 
-然后在根据展示列表进行组件封装,样式调整
+Home.vue中封装方法getHomeGoods（type）
 
-##### TabControl点击切换商品
+调用getHomeGoods（‘pop’）/getHomeGoods（‘new’）/getHomeGoods（‘sell’）  //默认请求一遍,然后通过计算属性传参到goodlist组件,默认渲染pop的商品
 
-通过子传父 在你点击的时候,发送一个为tabClick的事件,参数为你当前点击商品类别的下标,并在Home进行监听,使其监听到触发tabClick（tabClick分别为两个不同函数,命名重复而已）,
-
-```js
-//home组件中
-methods:{
-  tabClick(index){
-    //利用switch 来分辨
-      switch(index){
-          case 0:
-            this.currentType = 'pop'
-              break
-          case 0:
-            this.currentType = 'new'
-              break    
-          case 0:
-            this.currentType = 'sell'
-              break
-      }
-  }
-}
-computed:{
-    showGoods(){
-        //并且通过计算属性来尽心父 传子  //子组件在拿到数据后就可以开始进行循环渲染
-        return this.goods[this.currentType].list
-    }
-}
-```
+保存数据 
 
 ```js
-//home中所定义的data
-  data(){
-    return {
-      // result:null,
-      banners:[],
-      recommends:[],
-      titles:[],
-      goods:{
-        'pop': { page:0,list:[]},
-        'new': { page:0,list:[]},
-        'sell': { page:0,list:[]},
-      },
-      //定义一个为currentType来控制我们请求相应的商品数据
-      //默认请求一次pop数据
-      currentType: 'pop'
-    }
-  },
+this.goods[type].list.push(...res.data.data.list)
+//每次请求都要使page+1
+this.goods[type].page += 1
 ```
 
-#### Better-scroll 
+##### 商品数据展示
+
+封装了GoodsList组件
+
+通过props 来传递商品数据,具体传递那个数据,我们可以通过TabControl点击保存的currentType 来决定
+
+然后每一个商品的具体展示是通过循环封装的GoodsListitem组件
+
+通过props给GoodsListitem传入具体的商品数据
+
+#### Better-scroll 框架
 
 BetterScroll 是一款重点解决移动端（已支持 PC）各种滚动场景需求的插件。它的核心是借鉴的 [iscroll](https://github.com/cubiq/iscroll) 的实现，它的 API 设计基本兼容 iscroll，在 iscroll 的基础上又扩展了一些 feature 以及做了一些性能优化。
 
@@ -408,7 +402,6 @@ new BetterScroll('.wrapper',{
 
 ##### BetterScroll在项目中的封装和使用
 
-1. 基本使用
 2. 解决容器 动态高度
 
 ```js
@@ -417,13 +410,27 @@ import BetterSCroll from 'better-scroll'
 //由于1x 版本不再维护 
 //2x中我们需要安装一个插件来进行observe-dom 来进行动态获取scrollheight 可滚动高度,使得规定容器 动态高度中滚动
 npm install @better-scroll/observe-dom --save
-import ObserveDOM from '@better-scroll/observe-dom'
+import ObserveDOM from '@better-scroll/observe-dom'  //配合refresh()
 //在mouted阶段使用
+ props:{
+    a:{
+      type:Number,
+      default: 0
+    },
+    UpLoad:{
+      type:Boolean,
+      default: false
+    }
+  },
 mounted(){
+    let a = this.a
+    let UpLoad = this.UpLoad
     let srcoll = new BetterScroll('.wrapper',{
-       pullUpLoad:true,  // 2x 必须写入该参数,否则不支持上拉
-       pullDownRefresh:true //true 支持下拉
-        ObserveDOM:true //动态获取可滚动高度
+        //通过props来确定参数,是因为probeType 启用会影响性能(官方),可以传参代表是否启用
+       probeType:a  
+        //true/false 通过props 来设置是否要启用上拉效果
+       pullUpLoad:UpLoad,  // 2x 必须写入该参数,否则不支持上拉   //上拉触发pullingUp事件
+       ObserveDOM:true //动态获取可滚动高度
     })
 }
 ```
@@ -439,16 +446,6 @@ mounted(){
 }
 ```
 
-3. 上拉出现空白
-
-通过  
-
-```
-this.srcoll.finishPullUp()
-this.srcoll.finishPullDown()
-结束所相应的上拉/下拉加载行为
-```
-
 ##### 回到顶部
 
 components/content/BackTop/BackTop.vue
@@ -460,10 +457,18 @@ components/content/BackTop/BackTop.vue
 ```js
 @click.native 
 通过v-on修饰符 native 可以监听组件原生事件,不仅仅是点击
+通过ref标记scroll组件
+在scroll组件中封装了一个方法scrollTo(x,y,time)
+通过this.$refs.scroll.scrollTo(x,y,time) 来进行回到顶部的效果
 
-然后通过ref标记scroll组件
-通过this.$refs.scroll.scroll获取创建的BetterScroll对象scroll
-调用scroll.scrollTo(a,b,c,d,e) 来达到返回顶部的效果
+BackTop显示与隐藏
+在home.vue中定义iShow:false
+v-show绑定BackTop组件决定是否隐藏/显示
+监听scroll.vue发出的scroll事件
+scroll事件会默认返回一个参数(这里参数命名为position),其中包含当前滚动的x,y
+this.iShow = position. y> 1000  //判断
+
+scrollTo(a,b,c,d,e) 参数
 a: {type:number} x 横轴坐标(px)
 b: {type:number} y 纵轴坐标(px)
 c: {type:number} time 缓冲动画执行时长(ms)
@@ -484,4 +489,169 @@ let extraTransform = {
 bs.scrollTo(0, -60, 300, undefined, extraTransform)
 ```
 
-##### 关于BackTop 的显示隐藏
+##### 解决Scroll中 滚动区域高度的问题
+
+在Better-Scroll中 不会动态的获取图片的高度,从而导致我们请求过来的图片高度,不能够获取到,导致可滚动区域的高度实际小于真正的滚动区域高度,
+
+ 方法1:------Beter-Scroll2.0中 可以通过添加observeImage :true  
+
+<h4>开启对 wrapper 子元素中图片元素的加载的探测。无论图片的加载成功与否，都会自动调用 BetterScroll 的 refresh 方法来重新计算可滚动的宽度或者高度，新增于 v2.1.0 版本。</h4>
+
+方法2:  Better-Scroll  方法 refresh()  调用就会动态获取图片的高度
+
+我们通过load事件来监听图片加载,,由于涉及到非父子组件的通信,所以通过事件总线$bus
+
+* Vue.prototype.$bus =new Vue()
+* this.$bus.$emit(‘事件名称’,参数)
+* this.$bus.$on(‘事件名称’,回调函数(‘参数))
+
+在通过this.$bus 来发出事件, 然后在Home.vue中用this.$bus.$on来监听事件,从而调用Scroll中封装的refresh(),
+
+```js
+// Scroll组件中
+//封装为函数是因为,调用refresh()会对性能有所影响,所以一般不开启,需要的时候在调用此函数
+methods:{
+    refresh(){
+      this.scroll.refresh()
+    },
+}
+```
+
+方法3： 通过vuex  定义一个状态,每当图片加载完毕,通过commit调用mutations来对state状态进行改变,然后在Home.vue 中 通过  watch 来监听该状态,状态发生变化调用相应函数
+
+##### 解决refresh 函数找不到的问题
+
+当你图片加载完毕发送事件时,你的Scroll对象或许并没有创建完毕
+
+在Scroll.vue中
+
+```js
+  this.scroll && this.scroll.refresh()
+//只有当this.scroll创建完毕之后才能调用refresh方法
+```
+
+当你切换/分类/购物车/我的 再切到首页,也会发现找不到refresh
+
+![image-20210627170842059](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210627170842059.png)
+
+因为$ref 不具有响应式,当你切到分类,首页被销毁了,再回到首页,首页被创建了,其中refs在出事渲染的时候不能访问到
+
+##### 对refresh调用频繁的问题 进行防抖函操作
+
+防抖函数: 多次触发,取最后  debounce
+
+节流阀: 多次触发,取最前,忽略该阶段后面的多次触发 throllte
+
+* 防抖函数的过程
+
+  * 如果直接调用refresh,会调用30次
+
+  * 我们可以将refresh传入debounce函数中,返回一个新函数
+
+  * 之后调用refresh的时候,就使用返回的新函数
+
+  * 而新生成的函数,并不会非常频繁的调用,如果下一次执行来的非常快,那么将上次调用取消掉
+
+  * ```js
+     mounted(){
+        const resh = this.debounce(this.$refs.scroll.refresh,500)
+        //3.监听item中图片加载完成
+        this.$bus.$on('change',()=>{
+          //调用防抖函数所返回的函数
+          resh()
+        })
+      },
+    //防抖函数
+    debounce(func,delay){
+          let timer = null;
+          return function(...args){
+            if(timer) clearTimeout(timer)
+              timer = setTimeout( () =>{
+                func.apply(this)
+              },delay)
+          }
+    }
+    ```
+
+##### 上拉加载更多
+
+* Scroll.vue中监听上拉事件,触发时,发出RequestSend事件
+* Home组件监听发出RequestSend事件
+* 然后调用已经封装好的getHomeGoods函数
+
+```js
+    getHomeGoods(type){
+        //每请求一次页码数+1,并作为参数传入
+      const page = this.goods[type].page+1
+      //封装好的网络请求函数
+      getHomeGoods(type,page).then(res=>{
+        //通过扩展运算符,将请求过来的商品数组,转换为逗号分隔的序列,并push相应type对象里面的list
+        this.goods[type].list.push(...res.data.data.list)
+          //列表内部的page++
+        this.goods[type].page++
+        //获取TabControl需title
+        this.titles = [...res.data.data.filter.list]
+        //调用在scrool中封装的函数,结束相应上拉加载效果
+        this.$refs.scroll.finishPullUp()
+      })
+    },
+```
+
+##### 关于TabControl的  CSS属性 position: sticky;  失效的解决
+
+相当于relative 与  fixed 的结合  并且可以自动监听scroll事件,当年你并没滚动到指定位置,比如top:20px;它会相当于relative效果,而滚到指定位置,就变为了fixed效果  -webkit-sticky
+
+使用条件：
+1、父元素不能overflow:hidden或者overflow:auto属性。
+2、必须指定top、bottom、left、right4个值之一，否则只会处于相对定位
+3、父元素的高度不能低于sticky元素的高度
+4、sticky元素仅在其父元素内生效
+
+##### TabControl的吸顶效果
+
+##### 获取TabCpmtrp的offsetTop
+
+必须要知道滚动到多少时,启动吸顶效果,
+
+##### 问题所在
+
+如果直接通过mounted中获取到TabControl 的offsetTop,这个值是不正确的
+
+要知道我们使用了BetterScroll框架,然而在TabControl上面大概分为轮播图,推荐信息,以及本周流行这些都是我们请求过来再进行加载的图片,还记得上面讲BetterScrol吗?,它不能够动态的获取到非固定宽高的图片,所以可能你获取的offsetTop值,会是缺少了轮播图加载的图片等等高度,所以是错误的.
+
+![image-20210630221404441](C:\Users\huxuexia\AppData\Roaming\Typora\typora-user-images\image-20210630221404441.png)
+
+##### 解决方案
+
+* 监听HomeSwiper中图片的加载完成
+* 加载完成后,发出事件,在Home中,获取正确的offsetTop值
+* 为了不让HomeSwiper多次发出事件,可以使用isLoad 来保存状态,只需要发出一次
+* 注意:这里不进行多次调用和debanuce
+
+```js
+this.$refs.tabControl.$el.offsetTop 这个时候获取的offsetTop就比较准确了
+```
+
+##### 监听滚动,动态改变TabControl的样式
+
+* 问题:动态改变TabControl 样式时, 会出现两个问题
+
+  * 问题一:下面的商品内容,会突然上移
+  * 问题二:TabControl 虽然设置了fixed,但还是会跟Better-Scroll一起滚上去了
+
+* 其他方案来解决停留问题.
+
+  * 导航栏下,复制粘贴一份PTabControl组件对象,利用它来实现停留效果.
+  * 当用户滚动到一定位置时,PTabControl显示出来,当滚动没有达到一定位置时,PTabControl隐藏起来
+
+* 其它问题  组件的数据具有作用域,导致我们在点击TabControl这两个组件的时候,会造成,点击所添加的类名不相同.
+
+* 解决方案
+
+* ```js
+  
+  //当点击会传过来index,这里需要给两个tabcontrol都重新赋值 currentIndex,是因为,虽然是同一个组件,但是两个组件中的数据,并不互通,都有自己相应的作用域.
+  this.$refs.tabcontrol1.$data.currentIndex = index
+  this.$refs.tabcontrol.$data.currentIndex = index
+  ```
+
